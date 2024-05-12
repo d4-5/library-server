@@ -20,6 +20,7 @@ jobs:
         uses: actions/setup-java@v4.2.1
         with:
           distribution: oracle
+          java-version: 21
 
       - name: Build with Gradle
         run: ./gradlew clean build
