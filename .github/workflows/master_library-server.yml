@@ -53,5 +53,5 @@ jobs:
         with:
           app-name: 'library-server'
           slot-name: 'Production'
-          package: '*.jar'
+          package: '*SNAPSHOT.jar'
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_010A54CA4F8242C9872FCE4C4C62D696 }}
