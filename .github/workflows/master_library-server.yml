@@ -19,7 +19,7 @@ jobs:
       - name: Set up Java version
         uses: actions/setup-java@v4.2.1
         with:
-          java-version: 'java21'
+          distribution: oracle
 
       - name: Build with Gradle
         run: ./gradlew clean build
