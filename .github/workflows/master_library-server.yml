@@ -21,7 +21,10 @@ jobs:
         with:
           distribution: oracle
           java-version: 21
-
+          
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+        
       - name: Build with Gradle
         run: ./gradlew clean build
 
