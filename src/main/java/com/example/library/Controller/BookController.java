@@ -2,9 +2,11 @@ package com.example.library.Controller;
 
 import com.example.library.Entity.Book;
 import com.example.library.Repository.BookRepository;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,39 +28,86 @@ public class BookController {
     }
 
     @GetMapping("/{id}")
-    public Book getBookById(@PathVariable Integer id) {
+    public ResponseEntity<Book> getBookById(@PathVariable Integer id) {
         return bookRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Book not found with id: " + id));
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public Book createBook(@RequestBody Book book) {
-        return bookRepository.save(book);
+    public ResponseEntity<?> createBook(@Valid @RequestBody Book bookRequest, BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            return ResponseEntity.badRequest().body(bindingResult.getAllErrors());
+        }
+
+        boolean bookExists = bookRepository.existsByTitleAndAuthorNameAndAuthorSurnameAndAuthorPatronymicAndYear(
+                bookRequest.getTitle(),
+                bookRequest.getAuthorName(),
+                bookRequest.getAuthorSurname(),
+                bookRequest.getAuthorPatronymic(),
+                bookRequest.getYear()
+        );
+
+        if (bookExists) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body("A book with the same details already exists.");
+        }
+
+        Book savedBook = bookRepository.save(bookRequest);
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedBook);
     }
 
     @PutMapping("/{id}")
-    public Book updateBook(@PathVariable Integer id, @RequestBody Book bookDetails) {
-        Book book = bookRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Book not found with id: " + id));
+    public ResponseEntity<?> updateBook(@PathVariable Integer id, @Valid @RequestBody Book bookRequest, BindingResult bindingResult) {
+        if (bindingResult.hasErrors()) {
+            return ResponseEntity.badRequest().body(bindingResult.getAllErrors());
+        }
 
-        book.setTitle(bookDetails.getTitle());
-        book.setAuthor(bookDetails.getAuthor());
-        book.setQuantity(bookDetails.getQuantity());
+        return bookRepository.findById(id)
+                .map(existingBook -> {
+                    boolean duplicateExists = bookRepository.existsByTitleAndAuthorNameAndAuthorSurnameAndAuthorPatronymicAndYearAndIdNot(
+                            bookRequest.getTitle(),
+                            bookRequest.getAuthorName(),
+                            bookRequest.getAuthorSurname(),
+                            bookRequest.getAuthorPatronymic(),
+                            bookRequest.getYear(),
+                            id
+                    );
 
-        return bookRepository.save(book);
+                    if (duplicateExists) {
+                        return ResponseEntity.status(HttpStatus.CONFLICT)
+                                .body("Updating the book would result in duplicate entries.");
+                    }
+
+                    existingBook.setTitle(bookRequest.getTitle());
+                    existingBook.setAuthorName(bookRequest.getAuthorName());
+                    existingBook.setAuthorSurname(bookRequest.getAuthorSurname());
+                    existingBook.setAuthorPatronymic(bookRequest.getAuthorPatronymic());
+                    existingBook.setYear(bookRequest.getYear());
+                    existingBook.setQuantity(bookRequest.getQuantity());
+                    return ResponseEntity.ok().body(bookRepository.save(existingBook));
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
+
+
     @DeleteMapping("/{id}")
-    public void deleteBook(@PathVariable Integer id) {
-        bookRepository.deleteById(id);
+    public ResponseEntity<Void> deleteBook(@PathVariable Integer id) {
+        if (bookRepository.existsById(id)) {
+            bookRepository.deleteById(id);
+            return ResponseEntity.ok().build();
+        } else {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @GetMapping("/search")
     public List<Book> searchBooks(@RequestParam(required = false) String query) {
         if (query != null && !query.isEmpty()) {
-            return bookRepository.findByTitleContainingIgnoreCaseOrAuthorContainingIgnoreCase(query, query);
+            return bookRepository.searchByAllFields(query);
         } else {
-            return (List<Book>) bookRepository.findAll();
+            return getAllBooks();
         }
     }
 }
