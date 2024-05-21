@@ -1,15 +1,13 @@
 package com.example.library.Entity;
 
 import com.example.library.Validation.YearRange;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 @Entity
+@Table(uniqueConstraints = @UniqueConstraint(columnNames = {"authorName", "authorSurname", "id"}))
 public class Book {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
